@@ -1,0 +1,49 @@
+- name: app-rules
+  groups:
+  - name: Expand
+    rules:
+    - alert: HostHighCpuLoad
+      expr: (sum by (instance) (avg by (mode, instance) (rate(node_cpu_seconds_total{mode!="idle"}[2m]))) > 0.2) * on(instance) group_left (nodename) node_uname_info{nodename=~".+"}
+      for: 1m
+      labels:
+        severity: warning
+      annotations:
+        summary: Host high CPU load (instance {{ $labels.instance }})
+        description: "CPU load is > 80%\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+        apply: common
+    - alert: PrometheusTargetMissing
+      expr: up == 0
+      for: 0m
+      labels:
+        severity: critical
+      annotations:
+        summary: Prometheus target missing (instance {{ $labels.instance }})
+        description: "A Prometheus target has disappeared. An exporter might be crashed.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+        apply: prod
+    - alert: PrometheusTargetMissingWithWarmupTime
+      expr: sum by (instance, job) ((up == 0) * on (instance) group_right(job) (node_time_seconds - node_boot_time_seconds > 600))
+      for: 0m
+      labels:
+        severity: critical
+      annotations:
+        summary: Prometheus target missing with warmup time (instance {{ $labels.instance }})
+        description: "Allow a job time to start up (10 minutes) before alerting that it's down.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+        apply: common
+    - alert: PrometheusConfigurationReloadFailure
+      expr: prometheus_config_last_reload_successful != 1
+      for: 0m
+      labels:
+        severity: warning
+      annotations:
+        summary: Prometheus configuration reload failure (instance {{ $labels.instance }})
+        description: "Prometheus configuration reload error\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+        apply: common
+    - alert: PrometheusTooManyRestarts
+      expr: changes(process_start_time_seconds{job=~"prometheus|pushgateway|alertmanager"}[15m]) > 2
+      for: 0m
+      labels:
+        severity: warning
+      annotations:
+        summary: Prometheus too many restarts (instance {{ $labels.instance }})
+        description: "Prometheus has restarted more than twice in the last 15 minutes. It might be crashlooping.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+        apply: prod
