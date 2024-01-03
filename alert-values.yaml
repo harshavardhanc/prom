@@ -1,2 +1,10 @@
 prometheus:
   additionalPrometheusRules:
+  - name: app-rules
+    groups:
+    - name: Expand
+      rules:
+      - record: test_threshold
+        expr: avg by (instanceid, mountpoint,tenant) (1 - (test_base - fs_lower))
+      - record: test_diskpool
+        expr: avg by (instanceid, diskPoolId,tenant) ((test_base * test_upper_diskpool)/(test_baseline_diskpool + test_upper_diskpool))
