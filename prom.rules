@@ -1,3 +1,10 @@
+  - name: Expand-Group
+    rules:
+    - record: fs_low_disk_threshold
+      expr: avg by (instanceid, mountpoint,tenant) (1 - (fs_baseline - fs_lower))
+    - record: fs_lower_diskpool
+      expr: avg by (instanceid, diskPoolId,tenant) ((fs_baseline_diskpool * fs_upper_diskpool)/(fs_baseline_diskpool + fs_upper_diskpool))
+
     - alert: HostHighCpuLoad
       expr: (sum by (instance) (avg by (mode, instance) (rate(node_cpu_seconds_total{mode!="idle"}[2m]))) > 0.2) * on(instance) group_left (nodename) node_uname_info{nodename=~".+"}
       for: 1m
@@ -43,3 +50,30 @@
         summary: Prometheus too many restarts (instance {{ $labels.instance }})
         description: "Prometheus has restarted more than twice in the last 15 minutes. It might be crashlooping.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
         apply: prod
+
+
+
+
+  - name: Another-Group
+    rules:
+    - record: fs_low
+      expr: avg by (instanceid, mountpoint,tenant) (1 - (fs_baseline - fs_lower))
+    - record: fs_high
+      expr: avg by (instanceid, diskPoolId,tenant) ((fs_baseline_diskpool * fs_upper_diskpool)/(fs_baseline_diskpool + fs_upper_diskpool))
+
+    - alert: PrometheusTargetEmpty
+      expr: prometheus_sd_discovered_targets == 0
+      for: 0m
+      labels:
+        severity: critical
+      annotations:
+        summary: Prometheus target empty (instance {{ $labels.instance }})
+        description: "Prometheus has no target in service discovery\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+    - alert: PrometheusTargetScrapeDuplicate
+      expr: increase(prometheus_target_scrapes_sample_duplicate_timestamp_total[5m]) > 0
+      for: 0m
+      labels:
+        severity: warning
+      annotations:
+        summary: Prometheus target scrape duplicate (instance {{ $labels.instance }})
+        description: "Prometheus has many samples rejected due to duplicate timestamps but different values\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
