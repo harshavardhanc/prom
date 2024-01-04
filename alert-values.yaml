@@ -1,4 +1,2 @@
 prometheus:
   additionalPrometheusRules:
-  - name: app-rules
-    groups:
